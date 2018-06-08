@@ -16,21 +16,14 @@ class WearablesViewController: TTViewController {
     @IBOutlet var infoText: UILabel!
     
     // Connected wearable device.
-    private enum WearableDevice {
-        case Pebble, AppleWatch
+    fileprivate enum WearableDevice {
+        case appleWatch
     }
     
-    private var selectedDevice: WearableDevice = .Pebble {
+    fileprivate var selectedDevice: WearableDevice = .appleWatch {
         didSet {
             switch selectedDevice {
-            case .Pebble:
-                infoText.text = NSLocalizedString("Tap on the red button to start listening for your Pebble. Once Wearables mode is active just open any mode that supports wearable triggering, setup the mode just how you like it, and press the trigger button on your Pebble.", comment: "Tap on the red button to start listening for your Pebble. Once Wearables mode is active just open any mode that supports wearable triggering, setup the mode just how you like it, and press the trigger button on your Pebble.")
-                
-                shutterButtonEnabled(PebbleManager.sharedInstance.isPebbleConnected)
-                
-                break
-                
-            case .AppleWatch:
+            case .appleWatch:
                 infoText.text = NSLocalizedString("Tap on the red button to start listening for your Apple Watch. Once Wearables mode is active just open any mode that supports wearable triggering, setup the mode just how you like it, and press the trigger button on your Apple Watch.", comment: "Tap on the red button to start listening for your Apple Watch. Once Wearables mode is active just open any mode that supports wearable triggering, setup the mode just how you like it, and press the trigger button on your Apple Watch.")
                 
                 shutterButtonEnabled(true)
@@ -40,26 +33,17 @@ class WearablesViewController: TTViewController {
         }
     }
     
-    private var pebbleIsSelected: Bool {
-        get {
-            return NSUserDefaults.standardUserDefaults().boolForKey(constPebbleIsSelected)
-        } set (newValue) {
-            NSUserDefaults.standardUserDefaults().setBool(newValue, forKey: constPebbleIsSelected)
-            NSUserDefaults.standardUserDefaults().synchronize()
-        }
-    }
-    
     // MARK: Lifecycle
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        segmentedControl.setTitleTextAttributes([NSFontAttributeName: UIFont.triggertrap_metric_light(20.0)]
-            , forState: .Normal)
-        segmentedControl.setTitleTextAttributes([NSFontAttributeName: UIFont.triggertrap_metric_light(20.0)]
-            , forState: .Selected)
+        segmentedControl.setTitleTextAttributes([NSAttributedStringKey.font: UIFont.triggertrap_metric_light(20.0)]
+            , for: UIControlState())
+        segmentedControl.setTitleTextAttributes([NSAttributedStringKey.font: UIFont.triggertrap_metric_light(20.0)]
+            , for: .selected)
     }
     
-    override func viewWillAppear(animated: Bool) {
+    override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         // If an activity is already running, don't allow the user to start or stop wearables.
@@ -71,103 +55,54 @@ class WearablesViewController: TTViewController {
             shutterButtonEnabled(false)
         }
         
-        dispatch_async(dispatch_get_main_queue(),{
+        DispatchQueue.main.async(execute: {
             // Check if wearables is running, and show the feedback view, if it is.
             if WearablesManager.sharedInstance.isWearablesModeRunning() {
-                if self.selectedDevice == .Pebble {
-                    // If the selected mode is Pebble, but no device is connected
-                    // stop the service.
-                    if !PebbleManager.sharedInstance.isPebbleConnected {
-                        self.stopWearableMode()
-                    }
-                }
-                
                 self.showFeedbackView(ConstStoryboardIdentifierInfoFeedbackView)
             } else {
                 self.hideFeedbackView()
             }
             
         })
-        
-        // Register to receieve notification.
-        addNotificationObservers()
     }
     
-    override func viewDidAppear(animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        dispatch_async(dispatch_get_main_queue(),{
+        DispatchQueue.main.async(execute: {
             // Select the correct segment from the segmented control.
-            self.segmentedControl.selectedSegmentIndex = self.pebbleIsSelected ? 0 : 1
-            self.selectedDevice = self.pebbleIsSelected ? WearableDevice.Pebble : WearableDevice.AppleWatch
+            self.segmentedControl.selectedSegmentIndex = 1
+            self.selectedDevice = WearableDevice.appleWatch
         })
     }
     
-    override func viewWillDisappear(animated: Bool) {
+    override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        
-        // Remove notification observers.
-        removeNotificationObservers()
     }
     
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
-        // Remove notification observers.
-        removeNotificationObservers()
     }
     
     // MARK: Actions
     
-    @IBAction func segmentedControllerPressed(segmentedController: UISegmentedControl) {
-        // Check for the selected segment, Pebble or Apple Watch.
-        pebbleIsSelected = segmentedController.selectedSegmentIndex == 0 ? true : false
-        selectedDevice = pebbleIsSelected ? WearableDevice.Pebble : WearableDevice.AppleWatch
+    @IBAction func segmentedControllerPressed(_ segmentedController: UISegmentedControl) {
+        // Check for the selected segment Apple Watch.
+        selectedDevice = WearableDevice.appleWatch
     }
     
-    @IBAction func shutterButtonTouchUpInside(sender: UIButton) {
-        
-        // Open the Triggertrap app on the connected Pebble device, if there is one.
-        if !WearablesManager.sharedInstance.isWearablesModeRunning() && PebbleManager.sharedInstance.isPebbleConnected {
-            dispatch_async(dispatch_get_main_queue(),{
-                 PebbleManager.sharedInstance.openPebbleApp()
-            })
-        }
-        
+    @IBAction func shutterButtonTouchUpInside(_ sender: UIButton) {
         WearablesManager.sharedInstance.isWearablesModeRunning() ? stopWearableMode() : startWearableMode()
     }
     
     // MARK: - Notifications
     
-    func pebbleWatchStatusChanged(notification: NSNotification) {
-        
-        if selectedDevice == .Pebble {
-            let userInfo: Dictionary<String, Bool> = notification.userInfo as! Dictionary<String, Bool>
-            // TODO: Is "connected" a key word? If so it should be a constant.
-            let connected = userInfo["connected"]
-            
-            if let connected = connected {
-                
-                if WearablesManager.sharedInstance.isWearablesModeRunning() && !connected {
-                    stopWearableMode()
-                }
-                
-                // TODO: Is this really needed? It should be set once
-                // in start/stopWearableMode.
-                shutterButtonEnabled(connected)
-            }
-        }
-    }
-    
     override func feedbackViewHideAnimationCompleted() {
         super.feedbackViewHideAnimationCompleted()
         
         switch selectedDevice {
-        case .Pebble:
-            shutterButtonEnabled(PebbleManager.sharedInstance.isPebbleConnected)
-            break
-            
-        case .AppleWatch:
+        case .appleWatch:
             shutterButtonEnabled(true)
             break
         }
@@ -183,34 +118,22 @@ class WearablesViewController: TTViewController {
     
     // MARK: Private
     
-    private func addNotificationObservers() {
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(WearablesViewController.pebbleWatchStatusChanged(_:)), name: constPebbleWatchStatusChanged, object: nil)
-    }
-    
-    private func removeNotificationObservers() {
-        NSNotificationCenter.defaultCenter().removeObserver(self, name: constPebbleWatchStatusChanged, object: nil)
-    }
-    
-    private func startWearableMode() {
-        dispatch_async(dispatch_get_main_queue(),{
+    fileprivate func startWearableMode() {
+        DispatchQueue.main.async(execute: {
             self.showFeedbackView(ConstStoryboardIdentifierInfoFeedbackView)
             WearablesManager.sharedInstance.startSession()
             self.startShutterButtonAnimation()
             
             switch self.selectedDevice {
-            case .Pebble:
-                self.feedbackViewController.infoLabel?.text = String(format: NSLocalizedString("Listening for your wearable. Navigate to a Wearables compatible mode, and you’re ready to use your Wearable to trigger your camera.", comment: "Listening for your wearable. Navigate to a Wearables compatible mode, and you’re ready to use your Wearable to trigger your camera."))
-                break
-                
-            case .AppleWatch:
+            case .appleWatch:
                 self.feedbackViewController.infoLabel?.text = String(format: NSLocalizedString("Listening for your wearable. Navigate to a Wearables compatible mode, and you’re ready to use your Wearable to trigger your camera.", comment: "Listening for your wearable. Navigate to a Wearables compatible mode, and you’re ready to use your Wearable to trigger your camera."))
                 break
             }
         })
     }
     
-    private func stopWearableMode() {
-        dispatch_async(dispatch_get_main_queue(),{
+    fileprivate func stopWearableMode() {
+        DispatchQueue.main.async(execute: {
             self.hideFeedbackView()
             WearablesManager.sharedInstance.endSession()
             self.stopShutterButtonAnimation()

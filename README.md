@@ -10,9 +10,17 @@ The Triggertrap system consists of 3 parts:
 
 Triggertrap is a commercial project that was conceived in 2010, launched in 2011, and ultimately went out of business in 2017. 
 
+# Running the code
+
+- Download the git repo
+- Run `pod install`
+- Open the .xcworkspace file
+
 # Credits
 
-The original software for iOS was built by Matt Kane, and it was further developed by Ross Gibson and Valentin Kalchev.
+The original software for iOS was built by [Matt Kane](https://github.com/ascorbic), and it was further developed by [Ross Gibson](https://github.com/Ross-Gibson) and [Valentin Kalchev](https://github.com/Valentin-Kalchev)
+
+Further Open Source contributions have been made by [Alex Taffe](https://github.com/alex-taffe).
 
 # Licence - Open source under the MIT licence. 
 

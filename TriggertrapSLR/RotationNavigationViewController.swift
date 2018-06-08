@@ -10,6 +10,10 @@ import UIKit
 
 class RotationNavigationViewController: UINavigationController {
     
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent
+    }
+    
     // MARK: - Lifecycle
     
     override func viewDidLoad() {
@@ -24,11 +28,11 @@ class RotationNavigationViewController: UINavigationController {
     }
     
     // MARK: - Rotation
-    override func supportedInterfaceOrientations() -> UIInterfaceOrientationMask {
-        return UIInterfaceOrientationMask.All
+    override var supportedInterfaceOrientations : UIInterfaceOrientationMask {
+        return UIInterfaceOrientationMask.all
     }
     
-    override func shouldAutorotate() -> Bool {
+    override var shouldAutorotate : Bool {
         // Allow rotation.
         return true
     }
